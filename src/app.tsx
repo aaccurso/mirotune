@@ -1,40 +1,43 @@
-import * as React from 'react';
+import React, {useState} from 'react';
 import ReactDOM from 'react-dom';
+import SoundfontProvider from './components/SoundfontProvider';
+import { VirtualKeyboard } from './components/VirtualKeyboard';
 
-async function addSticky() {
-  const stickyNote = await miro.board.createStickyNote({
-    content: 'Hello, World!',
-  });
+// webkitAudioContext fallback needed to support Safari
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+const soundfontHostname = 'https://d1pzp51pvbm36p.cloudfront.net';
 
-  await miro.board.viewport.zoomTo(stickyNote);
-}
+
 
 function App() {
-  React.useEffect(() => {
-    addSticky();
-  }, []);
+  const [isRecording, setIsRecording] = useState(false)
+  const [recordedNotes, setRecordedNotes] = useState([])
+  const [recordingStartTime, setRecordingStartTime] = useState()
+  const startRecording = () => {
+    setIsRecording(true)
+  }
+  const stopRecording = () => {
+    setIsRecording(false)
+  }
 
   return (
     <div className="grid wrapper">
       <div className="cs1 ce12">
-        <img src="/src/assets/congratulations.png" alt="" />
+        <h1>MiroTune</h1>
       </div>
       <div className="cs1 ce12">
-        <h1>Congratulations!</h1>
-        <p>You've just created your first Miro app!</p>
-        <p>
-          To explore more and build your own app, see the Miro Developer
-          Platform documentation.
-        </p>
+        <SoundfontProvider
+        instrumentName="acoustic_grand_piano"
+        audioContext={audioContext}
+        hostname={soundfontHostname}
+        render={({ isLoading, playNote, stopNote }) => (
+          <VirtualKeyboard disabled={isLoading} playNote={playNote} stopNote={stopNote} />
+        )}/>
       </div>
       <div className="cs1 ce12">
-        <a
-          className="button button-primary"
-          target="_blank"
-          href="https://developers.miro.com"
-        >
-          Read the documentation
-        </a>
+        <button className="button button-primary" type="button" onClick={() => isRecording ? stopRecording() : startRecording()}>
+          {isRecording ? 'Done' : 'Record'}
+        </button>
       </div>
     </div>
   );
