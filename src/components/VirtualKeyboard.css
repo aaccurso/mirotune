@@ -1,0 +1,48 @@
+.MiroTheme .ReactPiano__Key--accidental {
+    background: black;
+    border-color: black;
+    border-width: 2px;
+}
+
+.MiroTheme .ReactPiano__Key--natural {
+    background: white;
+    border-color: black;
+    border-top-width: 2px;
+    border-bottom-width: 2px;
+    margin-right: 0;
+    border-radius: 0;
+}
+
+.MiroTheme .ReactPiano__NoteLabel--accidental {
+    color: white;
+    font-weight: bold;
+}
+
+.MiroTheme .ReactPiano__NoteLabel--natural {
+    color: black;
+    font-weight: bold;
+}
+
+.MiroTheme .ReactPiano__Key--natural:first-child {
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    border-left-width: 2px;
+}
+
+.MiroTheme .ReactPiano__Key--natural:last-child {
+    border-top-right-radius: 10px;
+    border-bottom-right-radius: 10px;
+    border-right-width: 2px;
+}
+
+.MiroTheme .ReactPiano__Key--active.ReactPiano__Key--accidental {
+    background: #6881FF;
+}
+
+.MiroTheme .ReactPiano__Key--active.ReactPiano__Key--natural {
+    background: #6881FF;
+}
+
+.MiroTheme .ReactPiano__Key--active.ReactPiano__Key--natural .ReactPiano__NoteLabel--natural {
+    color: white;
+}

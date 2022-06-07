@@ -1,6 +1,7 @@
-import React, {useEffect} from 'react'
+import React, {useState} from 'react'
 import { Piano, KeyboardShortcuts, MidiNumbers } from 'react-piano';
 import 'react-piano/dist/styles.css';
+import './VirtualKeyboard.css'
 
 interface IProps {
     playNote: (midiNumber: number) => any
@@ -21,13 +22,15 @@ export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNot
 
     return (
         <Piano
+            className="MiroTheme"
             noteRange={{ first: firstNote, last: lastNote }}
             onPlayNoteInput={onPlayNoteInput}
             onStopNoteInput={onStopNoteInput}
             playNote={playNote}
             stopNote={stopNote}
             disabled={disabled}
-            width={300}
+            width={304}
+            keyWidthToHeight={0.2}
             keyboardShortcuts={keyboardShortcuts}
         />
     );
