@@ -8,10 +8,11 @@ interface IProps {
     stopNote: (midiNumber: number) => any
     onPlayNoteInput: (midiNumber: number) => any
     onStopNoteInput: (midiNumber: number) => any
+    activeNotes?: number[]
     disabled: boolean
 }
 
-export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNoteInput, onStopNoteInput, disabled}) => {
+export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNoteInput, onStopNoteInput, activeNotes, disabled}) => {
     const firstNote = MidiNumbers.fromNote('c3');
     const lastNote = MidiNumbers.fromNote('g4');
     const keyboardShortcuts = KeyboardShortcuts.create({
@@ -23,6 +24,7 @@ export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNot
     return (
         <Piano
             className="MiroTheme"
+            activeNotes={activeNotes}
             noteRange={{ first: firstNote, last: lastNote }}
             onPlayNoteInput={onPlayNoteInput}
             onStopNoteInput={onStopNoteInput}

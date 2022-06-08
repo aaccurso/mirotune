@@ -121,7 +121,7 @@ export function keyBoards() {
     }
     
     async function getNotesFromFrame(frame) {
-        const children = frame.getChildren()
+        const children = await frame.getChildren()
         const notes = {}
     
         for(const child of children ) {
@@ -133,9 +133,9 @@ export function keyBoards() {
         return notes
     }
 
-    function buildKeyboad(f, n) {
+    async function buildKeyboad(f, n) {
         const frame = f
-        const notes = n || getNotesFromFrame(frame)
+        const notes = n || await getNotesFromFrame(frame)
         let tickTimeout = null
         let recordTick = null
         const playingNotes = {}
@@ -261,7 +261,8 @@ export function keyBoards() {
             const frame = await createFrame()
             const notes = await createBoardKeys(frame)
             return buildKeyboad(frame, notes)
-        }
+        },
+        prepareKeyboard: buildKeyboad,
     }
 }
 
