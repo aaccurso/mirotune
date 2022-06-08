@@ -2,23 +2,30 @@ import React, {useState, useEffect} from 'react';
 import ReactDOM from 'react-dom';
 import SoundfontProvider from './components/SoundfontProvider';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
+import { keyBoards } from './script-board'
+import { midiNote } from './utils/midiNote';
 
 const audioContext = new window.AudioContext();
 const soundfontHostname = 'https://d1pzp51pvbm36p.cloudfront.net';
 
 const RECORDING_INTERVAL_MS = 50
 
-interface NoteEvents {
-  midiNumber: number
-  time: number
-  type: 'start' | 'stop'
+interface BoardKeyboard {
+  startRecording(): Promise<void>;
+  stopRecording(): void;
+  startNote(note: any, startTime: any): Promise<false | undefined>;
+  stopNote(note: any, finishTime: any): Promise<void>;
+  play(): void;
+  pause(): void;
+  stopPlaying(): void;
 }
 
 type ActiveNotes = Record<number, boolean>
 
 function App() {
+  const keyboards = keyBoards()
+  const [recordKeyboard, setRecordKeyboard] = useState<BoardKeyboard>()
   const [isRecording, setIsRecording] = useState(false)
-  const [recordedNotes, setRecordedNotes] = useState<NoteEvents[]>([])
   const [recordingTimeMilliseconds, setRecordingTimeMilliseconds] = useState(0)
   const [activeNotes, setActiveNotes] = useState<ActiveNotes>({})
 
@@ -33,38 +40,34 @@ function App() {
   }, [isRecording]);
 
 
-  const startRecording = () => {
+  const startRecording = async () => {
+    const keyboard = await keyboards.createKeyboard()
+    setRecordKeyboard(keyboard)
+    keyboard.startRecording()
     setIsRecording(true)
     setRecordedNotes([])
   }
   const stopRecording = () => {
+    recordKeyboard?.stopRecording()
     setIsRecording(false)
     setRecordingTimeMilliseconds(0)
     setActiveNotes({})
   }
   const handlePlayNoteInput = (midiNumber: number) => {
-    console.log('handlePlayNoteInput', activeNotes, midiNumber)
     if (activeNotes[midiNumber] || !isRecording) {
       return
     }
+    console.log('handlePlayNoteInput', activeNotes, midiNumber, recordingTimeMilliseconds)
     setActiveNotes({...activeNotes, [midiNumber]: true})
-    setRecordedNotes([...recordedNotes, {
-      midiNumber,
-      time: recordingTimeMilliseconds,
-      type: 'start'
-    }])
+    recordKeyboard?.startNote(midiNote(midiNumber), recordingTimeMilliseconds)
   }
   const handleStopNoteInput = (midiNumber: number) => {
-    console.log('handleStopNoteInput', activeNotes, midiNumber)
     if (!activeNotes[midiNumber] || !isRecording) {
       return
     }
+    console.log('handleStopNoteInput', activeNotes, midiNumber, recordingTimeMilliseconds)
     setActiveNotes({...activeNotes, [midiNumber]: false})
-    setRecordedNotes([...recordedNotes, {
-      midiNumber,
-      time: recordingTimeMilliseconds,
-      type: 'stop'
-    }])
+    recordKeyboard?.stopNote(midiNote(midiNumber), recordingTimeMilliseconds)
   }
 
   return (
@@ -92,9 +95,6 @@ function App() {
       </div>
       <div className="cs1 ce12">
         Recording time: {recordingTimeMilliseconds} ms
-        {recordedNotes.map((note, index) => (
-          <div key={index}>Midi number: {note.midiNumber} Time: {note.time} Type: {note.type}</div>
-        ))}
       </div>
     </div>
   );

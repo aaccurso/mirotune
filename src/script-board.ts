@@ -1,11 +1,11 @@
-function keyBoards() {
+export function keyBoards() {
     const NOTE_WIDTH = 430
     const NOTE_HEIGHT= 100
     const FRAME_BORDER = 100
     const RECORD_AREA_OFFSET = (2*FRAME_BORDER) + NOTE_WIDTH
     const SIZE_PER_MILISECOND = 0.1
     const TICK_TIMEOUT = 500
-    const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60 * 60
+    const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60
     
     async function createFrame() {
         const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
@@ -238,14 +238,14 @@ function keyBoards() {
     }
 }
 
-const keyboards = keyBoards()
-const keyboard = await keyboards.createKeyboard()
+// const keyboards = keyBoards()
+// const keyboard = await keyboards.createKeyboard()
 
-await keyboard.startRecording();
-setTimeout(async () => {
-    await keyboard.startNote("C", 1000)
-    setTimeout(async () => {
-        await keyboard.stopNote("C", 5000)
-        keyboard.stopRecording();
-    }, 4000)
-}, 1000)
+// await keyboard.startRecording();
+// setTimeout(async () => {
+//     await keyboard.startNote("C", 1000)
+//     setTimeout(async () => {
+//         await keyboard.stopNote("C", 5000)
+//         keyboard.stopRecording();
+//     }, 4000)
+// }, 1000)
