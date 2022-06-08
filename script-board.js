@@ -1,20 +1,24 @@
-async function keyBoards() {
+function keyBoards() {
     const NOTE_WIDTH = 430
     const NOTE_HEIGHT= 100
     const FRAME_BORDER = 100
     const RECORD_AREA_OFFSET = (2*FRAME_BORDER) + NOTE_WIDTH
-    const SIZE_PER_MILISECOND = 0.5
-
+    const SIZE_PER_MILISECOND = 0.1
+    const TICK_TIMEOUT = 500
+    const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60 * 60
+    
     async function createFrame() {
+        const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
+        const frameWidth = NOTE_WIDTH + (2*FRAME_BORDER) + FRAME_WIDTH_BY_TIME
         return await miro.board.createFrame({
             "title": "Frame 1",
             "style": {
             "fillColor": "#ffffff"
             },
-            "x": 315,
-            "y": 502.5,
-            "height": (NOTE_HEIGHT * 7) + 200,
-            "width": 630
+            "x": frameWidth / 2,
+            "y": frameHeight / 2,
+            "height": frameHeight,
+            "width": frameWidth
         })
     }
 
@@ -87,7 +91,9 @@ async function keyBoards() {
             }
             newPositionY += blackNote.width + (whiteNote.width/3)
         }
-    
+
+        await miro.board.viewport.zoomTo(Object.values(notes))
+        console.log(notes)
         return notes
     }
 
@@ -118,21 +124,98 @@ async function keyBoards() {
         return notes
     }
 
-    function buildKeyboad(frame, notes) {
-        const frame = frame
-        const notes = notes || getNotesFromFrame(frame)
+    function buildKeyboad(f, n) {
+        const frame = f
+        const notes = n || getNotesFromFrame(frame)
+        let tickTimeout = null
+        let recordTick = null
+        const playingNotes = {}
+        
         return {
-            startRecording() {
-                
+            async startRecording() {
+                recordTick = await miro.board.createShape({
+                    "shape": "rectangle",
+                    "style": {
+                      "fillColor": "#1a1a1a",
+                      "fontFamily": "open_sans",
+                      "fontSize": 10,
+                      "textAlign": "center",
+                      "textAlignVertical": "bottom"
+                    },
+                    "x": RECORD_AREA_OFFSET,
+                    "y": frame.y,
+                    "width": 8,
+                    "height": frame.height * 2
+                })
+
+                tickTimeout = setInterval(async () => {
+                    recordTick.x += (SIZE_PER_MILISECOND * TICK_TIMEOUT)
+                    await miro.board.sync(recordTick)
+                    miro.board.viewport.zoomTo(recordTick)
+                }, TICK_TIMEOUT)
+
             },
             stopRecording() {
+                if(tickTimeout) {
+                    clearInterval(tickTimeout)
+                    miro.board.remove(recordTick)
+                }
+            },
+            async startNote(note, startTime) {
+                if(!tickTimeout) {
+                    return false
+                }
+
+                const noteUpper = note.toUpperCase()
+                const elementWidth =  8
+                const noteElement = await miro.board.createShape({
+                    "shape": "round_rectangle",
+                    "content": `<p>${noteUpper}</p>`,
+                    "style": {
+                      "fillColor": "#6881FF",
+                      "fontFamily": "open_sans",
+                      "fontSize": 10,
+                      "textAlign": "center",
+                      "textAlignVertical": "bottom"
+                    },
+                    "x": RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (elementWidth/2),
+                    "y": notes[noteUpper].y,
+                    "width": elementWidth,
+                    "height": (notes[noteUpper].width/3) * 2
+                })
                 
+                const timeoutId = setInterval(() => {
+                    const walkWidth = Math.floor(SIZE_PER_MILISECOND * TICK_TIMEOUT)
+                    noteElement.width += walkWidth
+                    noteElement.x +=  walkWidth / 2
+
+                    miro.board.sync(noteElement)
+                }, TICK_TIMEOUT)
+
+                playingNotes[noteUpper] = {
+                    startTime,
+                    noteElement,
+                    clearTimeout() {
+                        clearTimeout(timeoutId)
+                    }
+                }
             },
-            startNote(note, time) {
-    
-            },
-            stopNote(note, time) {
-    
+            async stopNote(note, finishTime) {
+                if(!tickTimeout || !playingNotes[note]) {
+                    return false
+                }
+                const noteUpper = note.toUpperCase()
+                playingNotes[noteUpper].clearTimeout()
+                const startTime = playingNotes[noteUpper].startTime
+                const duration = finishTime - startTime
+
+                playingNotes[noteUpper].noteElement.width =  Math.floor(duration * SIZE_PER_MILISECOND)
+                playingNotes[noteUpper].noteElement.x =  RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (playingNotes[noteUpper].noteElement.width / 2)
+
+                await miro.board.sync(playingNotes[noteUpper].noteElement)
+
+                delete playingNotes[noteUpper]
+
             },
             play() {
                 const recorded = getRecordFromFrame(frame)
@@ -154,3 +237,15 @@ async function keyBoards() {
         }
     }
 }
+
+const keyboards = keyBoards()
+const keyboard = await keyboards.createKeyboard()
+
+await keyboard.startRecording();
+setTimeout(async () => {
+    await keyboard.startNote("C", 1000)
+    setTimeout(async () => {
+        await keyboard.stopNote("C", 5000)
+        keyboard.stopRecording();
+    }, 4000)
+}, 1000)
