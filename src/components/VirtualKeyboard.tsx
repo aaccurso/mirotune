@@ -14,7 +14,7 @@ interface IProps {
 
 export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNoteInput, onStopNoteInput, activeNotes, disabled}) => {
     const firstNote = MidiNumbers.fromNote('c3');
-    const lastNote = MidiNumbers.fromNote('g4');
+    const lastNote = MidiNumbers.fromNote('b3');
     const keyboardShortcuts = KeyboardShortcuts.create({
         firstNote: firstNote,
         lastNote: lastNote,
@@ -32,7 +32,6 @@ export const VirtualKeyboard: React.FC<IProps> = ({playNote, stopNote, onPlayNot
             stopNote={stopNote}
             disabled={disabled}
             width={304}
-            keyWidthToHeight={0.2}
             keyboardShortcuts={keyboardShortcuts}
         />
     );

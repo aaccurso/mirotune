@@ -19,6 +19,7 @@ interface BoardKeyboard {
   play(): void;
   pause(): void;
   stopPlaying(): void;
+  getFrame(): Frame;
 }
 
 type ActiveNotes = Record<number, boolean>
@@ -54,17 +55,26 @@ function App() {
 
 
   const startRecording = async () => {
-    const keyboard = await keyboards.createKeyboard()
-    setRecordKeyboard(keyboard)
-    keyboard.startRecording()
+    // const viewport = await miro.board.viewport.get()
+    // const center = {
+    //   x: viewport.x + viewport.width,
+    //   y: viewport.y + viewport.height
+    // }
+    const recordKeyboard = await keyboards.createKeyboard(`MiroTune - ${Date.now()}`)
+    const newTuneFrame = recordKeyboard.getFrame()
+    setTuneFrames([...tuneFrames, newTuneFrame])
+    setRecordKeyboard(recordKeyboard)
+    recordKeyboard.startRecording()
     setIsRecording(true)
   }
+
   const stopRecording = () => {
     recordKeyboard?.stopRecording()
     setIsRecording(false)
     setRecordingTimeMilliseconds(0)
     setActiveNotes({})
   }
+
   const handlePlayNoteInput = (midiNumber: number) => {
     if (activeNotes[midiNumber] || !isRecording) {
       return
@@ -73,6 +83,7 @@ function App() {
     setActiveNotes({...activeNotes, [midiNumber]: true})
     recordKeyboard?.startNote(midiNote(midiNumber), recordingTimeMilliseconds)
   }
+
   const handleStopNoteInput = (midiNumber: number) => {
     if (!activeNotes[midiNumber] || !isRecording) {
       return
@@ -80,6 +91,19 @@ function App() {
     console.log('handleStopNoteInput', activeNotes, midiNumber, recordingTimeMilliseconds)
     setActiveNotes({...activeNotes, [midiNumber]: false})
     recordKeyboard?.stopNote(midiNote(midiNumber), recordingTimeMilliseconds)
+  }
+
+  const handlePlay = async (tuneFrame: Frame) => {
+    const keyboard = await keyboards.prepareKeyboard(tuneFrame)
+    keyboard.play((note: string, duration: number) => {
+      console.log('playNote', note)
+      const noteNumber = midiNumber(note)
+      setPlayingNotes(prevNotes => [...prevNotes || [], noteNumber])
+      setTimeout(() => {
+        console.log('stopNote', note)
+        setPlayingNotes(prevNotes => prevNotes?.filter(note => note !== noteNumber))
+      }, duration)
+    })
   }
 
   return (
@@ -109,33 +133,24 @@ function App() {
           {isRecording ? 'Done' : 'Record'}
         </button>
       </div>
-      <div className="cs1 ce12">
-        <hr className="hr"/>
-        <h3 className="h3">Tunes in this board</h3>
-        {tuneFrames.map((tuneFrame) => {
-          return (
-            <div className="grid" key={tuneFrame.id}>
-              <div className="cs1 ce9">
-                {tuneFrame.title}
+      {tuneFrames.length > 0 && (
+        <div className="cs1 ce12">
+          <hr className="hr"/>
+          <h3 className="h3">Tunes in this board</h3>
+          {tuneFrames.map((tuneFrame) => {
+            return (
+              <div className="grid" style={{"marginBottom": '10px'}} key={tuneFrame.id}>
+                <div className="cs1 ce9">
+                  {tuneFrame.title}
+                </div>
+                <div className="cs10 ce12">
+                  <button className="button button-primary button-small" type="button" onClick={() => handlePlay(tuneFrame)}>Play</button>
+                </div>
               </div>
-              <div className="cs10 ce12">
-                <button className="button button-primary button-small" type="button" onClick={
-                  async () => {
-                    const keyboard = await keyboards.prepareKeyboard(tuneFrame)
-                    keyboard.play((note: string, duration: number) => {
-                      const noteNumber = midiNumber(note)
-                      setPlayingNotes([...playingNotes || [], noteNumber])
-                      setTimeout(() => {
-                        setPlayingNotes(playingNotes?.filter(note => note !== noteNumber))
-                      }, duration)
-                    })
-                  }
-                }>Play</button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   );
 }

@@ -7,11 +7,11 @@ export function keyBoards() {
     const TICK_TIMEOUT = 500
     const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60
     
-    async function createFrame() {
+    async function createFrame(title: string) {
         const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
         const frameWidth = NOTE_WIDTH + (2*FRAME_BORDER) + FRAME_WIDTH_BY_TIME
         return await miro.board.createFrame({
-            "title": "Frame 1",
+            title,
             "style": {
             "fillColor": "#ffffff"
             },
@@ -252,7 +252,7 @@ export function keyBoards() {
 
                     if(Object.values(recorded).length <= 0) {
                         console.log("stopped")
-                        clearTimeout(intervalId)
+                        clearInterval(intervalId)
                     }
                 }, 50)
             },
@@ -262,12 +262,15 @@ export function keyBoards() {
             stopPlaying() {
                 
             },
+            getFrame() {
+                return frame
+            }
         }
     }
 
     return {
-        createKeyboard: async () => {
-            const frame = await createFrame()
+        createKeyboard: async (title: string) => {
+            const frame = await createFrame(title)
             const notes = await createBoardKeys(frame)
             return buildKeyboad(frame, notes)
         },
