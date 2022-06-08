@@ -16,10 +16,14 @@ interface BoardKeyboard {
   stopRecording(): void;
   startNote(note: any, startTime: any): Promise<false | undefined>;
   stopNote(note: any, finishTime: any): Promise<void>;
-  play(): void;
-  pause(): void;
+  play(onPlayNote: any, onStop: any): void;
   stopPlaying(): void;
   getFrame(): Frame;
+}
+
+interface TuneFramePlaying {
+  frame: Frame
+  keyboard: BoardKeyboard
 }
 
 type ActiveNotes = Record<number, boolean>
@@ -27,6 +31,7 @@ type ActiveNotes = Record<number, boolean>
 function App() {
   const keyboards = keyBoards()
   const [tuneFrames, setTuneFrames] = useState<Frame[]>([])
+  const [currentTuneFramePlaying, setCurrentTuneFramePlaying] = useState<TuneFramePlaying>()
   const [recordKeyboard, setRecordKeyboard] = useState<BoardKeyboard>()
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTimeMilliseconds, setRecordingTimeMilliseconds] = useState(0)
@@ -48,7 +53,7 @@ function App() {
     console.log('tune frames useEffect')
     async function getTuneFrames() {
       const frames = await miro.board.get({type: 'frame'})
-      setTuneFrames(frames)
+      setTuneFrames(frames.filter(frame => frame.title.includes('MiroTune')))
     }
     getTuneFrames()
   }, [])
@@ -93,9 +98,22 @@ function App() {
     recordKeyboard?.stopNote(midiNote(midiNumber), recordingTimeMilliseconds)
   }
 
+  const handleStop = (tuneFrame?: Frame) => {
+    if (tuneFrame && tuneFrame.id !== currentTuneFramePlaying?.frame.id) {
+      return
+    }
+    setCurrentTuneFramePlaying(undefined)
+    currentTuneFramePlaying?.keyboard.stopPlaying()
+  }
+
   const handlePlay = async (tuneFrame: Frame) => {
-    const keyboard = await keyboards.prepareKeyboard(tuneFrame)
-    keyboard.play((note: string, duration: number) => {
+    handleStop()
+    const keyboard: BoardKeyboard = await keyboards.prepareKeyboard(tuneFrame)
+    setCurrentTuneFramePlaying({
+      frame: tuneFrame,
+      keyboard,
+    })
+    const onPlayNote = (note: string, duration: number) => {
       console.log('playNote', note)
       const noteNumber = midiNumber(note)
       setPlayingNotes(prevNotes => [...prevNotes || [], noteNumber])
@@ -103,12 +121,13 @@ function App() {
         console.log('stopNote', note)
         setPlayingNotes(prevNotes => prevNotes?.filter(note => note !== noteNumber))
       }, duration)
-    })
+    }
+    keyboard.play(onPlayNote, handleStop)
   }
 
   return (
     <div className="grid wrapper">
-      <div className="cs1 ce12">
+      <div className="cs1 ce12" style={{marginBottom: '10px'}}>
         <SoundfontProvider
           instrumentName="acoustic_grand_piano"
           audioContext={audioContext}
@@ -126,17 +145,21 @@ function App() {
         />
       </div>
       <div className="cs1 ce7">
-        Recording time: {recordingTimeMilliseconds} ms
+        Time: {recordingTimeMilliseconds} ms
       </div>
       <div className="cs8 ce12">
         <button className="button button-primary" type="button" onClick={() => isRecording ? stopRecording() : startRecording()}>
           {isRecording ? 'Done' : 'Record'}
         </button>
       </div>
-      {tuneFrames.length > 0 && (
-        <div className="cs1 ce12">
+      <div className="cs1 ce12">
           <hr className="hr"/>
           <h3 className="h3">Tunes in this board</h3>
+          {tuneFrames.length === 0 && (
+            <div className="cs1 ce12">
+              Click the Record button to start a new Tune.
+            </div>
+          )}
           {tuneFrames.map((tuneFrame) => {
             return (
               <div className="grid" style={{"marginBottom": '10px'}} key={tuneFrame.id}>
@@ -144,13 +167,17 @@ function App() {
                   {tuneFrame.title}
                 </div>
                 <div className="cs10 ce12">
-                  <button className="button button-primary button-small" type="button" onClick={() => handlePlay(tuneFrame)}>Play</button>
+                    {currentTuneFramePlaying?.frame.id !== tuneFrame.id && (
+                      <button className="button button-primary button-small" type="button" onClick={() => handlePlay(tuneFrame)}>Play</button>
+                    )}
+                    {currentTuneFramePlaying?.frame.id === tuneFrame.id && (
+                      <button className="button button-danger button-small" type="button" onClick={() => handleStop(tuneFrame)}>Stop</button>
+                    )}
                 </div>
               </div>
             )
           })}
         </div>
-      )}
     </div>
   );
 }

@@ -138,6 +138,9 @@ export function keyBoards() {
         const notes = n || await getNotesFromFrame(frame)
         let tickTimeout = null
         let recordTick = null
+        let playInterval = null
+        let playTickTimeout = null
+        let playTick = null
         const playingNotes = {}
         
         return {
@@ -227,11 +230,11 @@ export function keyBoards() {
                 delete playingNotes[noteUpper]
 
             },
-            async play(onPlayNote) {
+            async play(onPlayNote, onStop) {
                 const recorded = await getRecordFromFrame(frame, notes)
                 console.log("RECORDED: ", recorded)
 
-                const playTick = await miro.board.createShape({
+                playTick = await miro.board.createShape({
                     "shape": "rectangle",
                     "style": {
                       "fillColor": "#1a1a1a",
@@ -246,7 +249,7 @@ export function keyBoards() {
                     "height": frame.height * 2
                 })
 
-                const playTickTimeout = setInterval(async () => {
+                playTickTimeout = setInterval(async () => {
                     playTick.x += (SIZE_PER_MILISECOND * TICK_TIMEOUT)
                     await miro.board.sync(playTick)
                     miro.board.viewport.zoomTo(playTick)
@@ -254,7 +257,7 @@ export function keyBoards() {
                 
                 let miliseconds = 0
                 let count = 0
-                const intervalId = setInterval(() => {
+                playInterval = setInterval(() => {
                     miliseconds += 50
                     
                     if(recorded[miliseconds]) {
@@ -273,17 +276,15 @@ export function keyBoards() {
 
                     if(Object.values(recorded).length === count) {
                         console.log("stopped")
-                        clearInterval(intervalId)
-                        clearInterval(playTickTimeout)
-                        miro.board.remove(playTick)
+                        this.stopPlaying()
+                        onStop && onStop()
                     }
                 }, 50)
             },
-            pause() {
-    
-            },
             stopPlaying() {
-                
+                clearInterval(playInterval)
+                clearInterval(playTickTimeout)
+                miro.board.remove(playTick)
             },
             getFrame() {
                 return frame
