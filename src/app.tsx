@@ -6,6 +6,8 @@ import { VirtualKeyboard } from './components/VirtualKeyboard';
 const audioContext = new window.AudioContext();
 const soundfontHostname = 'https://d1pzp51pvbm36p.cloudfront.net';
 
+const RECORDING_INTERVAL_MS = 50
+
 interface NoteEvents {
   midiNumber: number
   time: number
@@ -25,8 +27,8 @@ function App() {
       return
     }
     const interval = setInterval(() => {
-      setRecordingTimeMilliseconds(recordingTimeMilliseconds => recordingTimeMilliseconds + 1);
-    }, 1);
+      setRecordingTimeMilliseconds(recordingTimeMilliseconds => recordingTimeMilliseconds + RECORDING_INTERVAL_MS);
+    }, RECORDING_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [isRecording]);
 
