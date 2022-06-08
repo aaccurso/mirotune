@@ -113,7 +113,7 @@ export function keyBoards() {
                 const startX = (child.x - RECORD_AREA_OFFSET - (child.width/2))
                 const startTime = Math.floor(startX / SIZE_PER_MILISECOND)
                 const duration  = Math.floor(child.width / SIZE_PER_MILISECOND)
-                recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y]}]
+                recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y], child}]
             }
         }
 
@@ -204,8 +204,8 @@ export function keyBoards() {
                 playingNotes[noteUpper] = {
                     startTime,
                     noteElement,
-                    clearTimeout() {
-                        clearTimeout(timeoutId)
+                    clearInterval() {
+                        clearInterval(timeoutId)
                     }
                 }
             },
@@ -214,7 +214,7 @@ export function keyBoards() {
                     return false
                 }
                 const noteUpper = note.toUpperCase()
-                playingNotes[noteUpper].clearTimeout()
+                playingNotes[noteUpper].clearInterval()
                 const startTime = playingNotes[noteUpper].startTime
                 const duration = finishTime - startTime
 
@@ -231,28 +231,51 @@ export function keyBoards() {
                 const recorded = await getRecordFromFrame(frame, notes)
                 console.log("RECORDED: ", recorded)
 
-                // Object.entries(recorded).map(([key, values]) => {
-                //     setTimeout(() => {
-                //         for(const value of values) {
-                //             onPlayNote(value.note, value.duration)
-                //         }
-                //     }, key)
-                // })
+                const playTick = await miro.board.createShape({
+                    "shape": "rectangle",
+                    "style": {
+                      "fillColor": "#1a1a1a",
+                      "fontFamily": "open_sans",
+                      "fontSize": 10,
+                      "textAlign": "center",
+                      "textAlignVertical": "bottom"
+                    },
+                    "x": RECORD_AREA_OFFSET,
+                    "y": frame.y,
+                    "width": 8,
+                    "height": frame.height * 2
+                })
 
+                const playTickTimeout = setInterval(async () => {
+                    playTick.x += (SIZE_PER_MILISECOND * TICK_TIMEOUT)
+                    await miro.board.sync(playTick)
+                    miro.board.viewport.zoomTo(playTick)
+                }, TICK_TIMEOUT)
+                
                 let miliseconds = 0
+                let count = 0
                 const intervalId = setInterval(() => {
                     miliseconds += 50
+                    
                     if(recorded[miliseconds]) {
+                        count++
                         for(const record of recorded[miliseconds]){
                             onPlayNote(record.note, record.duration)
+                            record.child.style.fillColor = "#77CC66"
+                            
+                            miro.board.sync(record.child)
+                            setTimeout(() => {
+                                record.child.style.fillColor = "#6881FF"
+                                miro.board.sync(record.child)
+                            }, record.duration)
                         }
                     }
 
-                    delete recorded[miliseconds]
-
-                    if(Object.values(recorded).length <= 0) {
+                    if(Object.values(recorded).length === count) {
                         console.log("stopped")
                         clearInterval(intervalId)
+                        clearInterval(playTickTimeout)
+                        miro.board.remove(playTick)
                     }
                 }, 50)
             },
