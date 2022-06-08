@@ -97,27 +97,36 @@ export function keyBoards() {
         return notes
     }
 
-    function getRecordFromFrame(frame) {
-        const childrens = frame.getChildren()
+    async function getRecordFromFrame(frame, notes) {
+        const children = await frame.getChildren()
+        console.log(children)
+        const notesPosition = Object.entries(notes).reduce((previous, [key, value]) => {
+            return {
+                ...previous,
+                [value.y]: key
+            }
+        }, {})
         const recorded = {}
 
-        for(const children of childrens ) {
-            if(children.shape === "round_rectangle") {
-                const startTime = (children.x - RECORD_AREA_OFFSET) * SIZE_PER_MILISECOND
-                recorded[startTime] = children
+        for(const child of children ) {
+            if(child.shape === "round_rectangle") {
+                const startX = (child.x - RECORD_AREA_OFFSET - (child.width/2))
+                const startTime = Math.floor(startX / SIZE_PER_MILISECOND)
+                const duration  = Math.floor((startX + child.width) / SIZE_PER_MILISECOND)
+                recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y]}]
             }
         }
 
         return recorded
     }
     
-    function getNotesFromFrame(frame) {
-        const childrens = frame.getChildren()
+    async function getNotesFromFrame(frame) {
+        const children = frame.getChildren()
         const notes = {}
     
-        for(const children of childrens ) {
-            if(children.shape === "rectangle") {
-                notes[children.content.replace("<p>(.*)</p>", "$1")] = children
+        for(const child of children ) {
+            if(child.shape === "rectangle") {
+                notes[child.content.replace("<p>(.*)</p>", "$1")] = child
             }
         }
     
@@ -155,10 +164,10 @@ export function keyBoards() {
                 }, TICK_TIMEOUT)
 
             },
-            stopRecording() {
+            async stopRecording() {
                 if(tickTimeout) {
                     clearInterval(tickTimeout)
-                    miro.board.remove(recordTick)
+                    await miro.board.remove(recordTick)
                 }
             },
             async startNote(note, startTime) {
@@ -213,12 +222,30 @@ export function keyBoards() {
                 playingNotes[noteUpper].noteElement.x =  RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (playingNotes[noteUpper].noteElement.width / 2)
 
                 await miro.board.sync(playingNotes[noteUpper].noteElement)
+                await frame.add(playingNotes[noteUpper].noteElement)
 
                 delete playingNotes[noteUpper]
 
             },
-            play() {
-                const recorded = getRecordFromFrame(frame)
+            async play(onPlayNote) {
+                const recorded = await getRecordFromFrame(frame, notes)
+                console.log("RECORDED: ", recorded)
+                let miliseconds = 0
+                const intervalId = setInterval(() => {
+                    miliseconds++
+                    if(recorded[miliseconds]) {
+                        for(const record of recorded[miliseconds]){
+                            onPlayNote(record.note, record.duration)
+                        }
+                    }
+
+                    delete recorded[miliseconds]
+
+                    if(Object.values(recorded).length <= 0) {
+                        console.log("stopped")
+                        clearTimeout(intervalId)
+                    }
+                }, 1)
             },
             pause() {
     
