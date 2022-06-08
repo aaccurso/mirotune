@@ -112,7 +112,7 @@ export function keyBoards() {
             if(child.shape === "round_rectangle") {
                 const startX = (child.x - RECORD_AREA_OFFSET - (child.width/2))
                 const startTime = Math.floor(startX / SIZE_PER_MILISECOND)
-                const duration  = Math.floor((startX + child.width) / SIZE_PER_MILISECOND)
+                const duration  = Math.floor(child.width / SIZE_PER_MILISECOND)
                 recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y]}]
             }
         }
@@ -126,7 +126,7 @@ export function keyBoards() {
     
         for(const child of children ) {
             if(child.shape === "rectangle") {
-                notes[child.content.replace("<p>(.*)</p>", "$1")] = child
+                notes[child.content.replace(/<p>(.*)<\/p>/, "$1")] = child
             }
         }
     
@@ -230,9 +230,18 @@ export function keyBoards() {
             async play(onPlayNote) {
                 const recorded = await getRecordFromFrame(frame, notes)
                 console.log("RECORDED: ", recorded)
+
+                // Object.entries(recorded).map(([key, values]) => {
+                //     setTimeout(() => {
+                //         for(const value of values) {
+                //             onPlayNote(value.note, value.duration)
+                //         }
+                //     }, key)
+                // })
+
                 let miliseconds = 0
                 const intervalId = setInterval(() => {
-                    miliseconds++
+                    miliseconds += 50
                     if(recorded[miliseconds]) {
                         for(const record of recorded[miliseconds]){
                             onPlayNote(record.note, record.duration)
@@ -245,7 +254,7 @@ export function keyBoards() {
                         console.log("stopped")
                         clearTimeout(intervalId)
                     }
-                }, 1)
+                }, 50)
             },
             pause() {
     
@@ -274,6 +283,9 @@ export function keyBoards() {
 //     await keyboard.startNote("C", 1000)
 //     setTimeout(async () => {
 //         await keyboard.stopNote("C", 5000)
-//         keyboard.stopRecording();
+//         await keyboard.stopRecording()
+//         keyboard.play((note, duration) => {
+//             console.log(note, duration)
+//         })
 //     }, 4000)
 // }, 1000)
