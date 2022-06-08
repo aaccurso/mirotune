@@ -111,7 +111,7 @@ export function keyBoards() {
         for(const child of children ) {
             if(child.shape === "round_rectangle") {
                 const startX = (child.x - RECORD_AREA_OFFSET - (child.width/2))
-                const startTime = Math.floor(startX / SIZE_PER_MILISECOND)
+                const startTime = Math.floor(startX / SIZE_PER_MILISECOND) - (Math.floor(startX / SIZE_PER_MILISECOND) % 50)
                 const duration  = Math.floor(child.width / SIZE_PER_MILISECOND)
                 recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y], child}]
             }
