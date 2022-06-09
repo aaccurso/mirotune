@@ -1,0 +1,5 @@
+.select-small {
+    font-size: var(--font-size-medium);
+    height: 36px;
+    padding: var(--space-xsmall) 12px var(--space-xsmall);
+}

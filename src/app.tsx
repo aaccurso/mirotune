@@ -5,6 +5,8 @@ import SoundfontProvider from './components/SoundfontProvider';
 import { VirtualKeyboard } from './components/VirtualKeyboard';
 import { keyBoards } from './script-board'
 import { midiNote, midiNumber } from './utils/midiNote';
+import instruments from 'soundfont-player/names/musyngkite.json'
+import './app.css'
 
 const audioContext = new window.AudioContext();
 const soundfontHostname = 'https://d1pzp51pvbm36p.cloudfront.net';
@@ -30,6 +32,7 @@ type ActiveNotes = Record<number, boolean>
 
 function App() {
   const keyboards = keyBoards()
+  const [instrumentName, setInstrumentName] = useState('acoustic_grand_piano')
   const [tuneFrames, setTuneFrames] = useState<Frame[]>([])
   const [currentTuneFramePlaying, setCurrentTuneFramePlaying] = useState<TuneFramePlaying>()
   const [recordKeyboard, setRecordKeyboard] = useState<BoardKeyboard>()
@@ -127,9 +130,22 @@ function App() {
 
   return (
     <div className="grid wrapper">
-      <div className="cs1 ce12" style={{marginBottom: '10px'}}>
+      <div className="cs1 ce12">
+        <div className="input-group">
+          <select
+            className="select select-small"
+            onChange={(event) => setInstrumentName(event.target.value)}
+            value={instrumentName}
+          >
+            {instruments.map(instrument => (
+              <option key={instrument} value={instrument}>{instrument}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="cs1 ce12">
         <SoundfontProvider
-          instrumentName="acoustic_grand_piano"
+          instrumentName={instrumentName}
           audioContext={audioContext}
           hostname={soundfontHostname}
           render={({ isLoading, playNote, stopNote }) => (
@@ -147,8 +163,8 @@ function App() {
       <div className="cs1 ce7">
         Time: {recordingTimeMilliseconds} ms
       </div>
-      <div className="cs8 ce12">
-        <button className="button button-primary" type="button" onClick={() => isRecording ? stopRecording() : startRecording()}>
+      <div className="cs10 ce12">
+        <button className="button button-primary button-small" type="button" onClick={() => isRecording ? stopRecording() : startRecording()}>
           {isRecording ? 'Done' : 'Record'}
         </button>
       </div>
