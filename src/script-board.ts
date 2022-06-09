@@ -1,3 +1,5 @@
+import { Frame } from "@mirohq/websdk-types"
+
 export function keyBoards() {
     const NOTE_WIDTH = 430
     const NOTE_HEIGHT= 100
@@ -9,21 +11,23 @@ export function keyBoards() {
     const PLAY_INTERVAL_MS = 50
     
     async function createFrame(title: string) {
+        const frames = await miro.board.get({type: 'frame'})
+        const currentFramesNumber = frames.filter(frame => frame.title.startsWith("MiroTune - ")).length
         const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
         const frameWidth = NOTE_WIDTH + (2*FRAME_BORDER) + FRAME_WIDTH_BY_TIME
-        return await miro.board.createFrame({
+        return miro.board.createFrame({
             title,
             "style": {
             "fillColor": "#ffffff"
             },
             "x": frameWidth / 2,
-            "y": frameHeight / 2,
+            "y": (frameHeight / 2) + (frameHeight * currentFramesNumber) + (FRAME_BORDER * currentFramesNumber),
             "height": frameHeight,
             "width": frameWidth
         })
     }
 
-    async function createBoardKeys(frame) {
+    async function createBoardKeys(frame: Frame) {
         const offsetX = frame.x - (frame.width/2)
         const offsetY = frame.y - (frame.height/2)
     
@@ -71,7 +75,12 @@ export function keyBoards() {
                 x: newPositionX,
                 y: newPositionY,
             })
-            frame.add(shapeCreated)
+            shapeCreated.y -= offsetY
+            try{
+                await frame.add(shapeCreated)
+            } catch(e) {
+
+            }
             notes[note] = shapeCreated
             newPositionY += whiteNote.width
         }
@@ -87,20 +96,22 @@ export function keyBoards() {
                     x: newPositionX,
                     y: newPositionY,
                 })
-                frame.add(shapeCreated)
+                shapeCreated.y -= offsetY
+                try{
+                    await frame.add(shapeCreated)
+                } catch(e) {
+                    
+                }
                 notes[note] = shapeCreated
             }
             newPositionY += blackNote.width + (whiteNote.width/3)
         }
 
-        await miro.board.viewport.zoomTo(Object.values(notes))
-        console.log(notes)
         return notes
     }
 
     async function getRecordFromFrame(frame, notes) {
         const children = await frame.getChildren()
-        console.log(children)
         const notesPosition = Object.entries(notes).reduce((previous, [key, value]) => {
             return {
                 ...previous,
@@ -135,7 +146,7 @@ export function keyBoards() {
         return notes
     }
 
-    async function buildKeyboad(f, n) {
+    async function buildKeyboad(f: Frame, n) {
         const frame = f
         const notes = n || await getNotesFromFrame(frame)
         let tickTimeout = null
@@ -179,7 +190,8 @@ export function keyBoards() {
                 if(!tickTimeout) {
                     return false
                 }
-
+                const offsetX = frame.x - (frame.width/2)
+                const offsetY = frame.y - (frame.height/2)
                 const noteUpper = note.toUpperCase()
                 const isAccidental = noteUpper.includes('#')
                 const elementWidth =  8
@@ -193,18 +205,20 @@ export function keyBoards() {
                       "textAlign": "center",
                       "textAlignVertical": "bottom"
                     },
-                    "x": RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (elementWidth/2),
-                    "y": notes[noteUpper].y,
+                    "x": offsetX + RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (elementWidth/2),
+                    "y": notes[noteUpper].y + offsetY,
                     "width": elementWidth,
                     "height": (notes[noteUpper].width/3) * 2
                 })
                 
-                const timeoutId = setInterval(() => {
+                const timeoutId = setInterval(async () => {
                     const walkWidth = Math.floor(SIZE_PER_MILISECOND * TICK_TIMEOUT)
+                    
+                    console.log(">>>>>> 2", noteElement.y)
                     noteElement.width += walkWidth
                     noteElement.x +=  walkWidth / 2
-
-                    miro.board.sync(noteElement)
+                    
+                    await miro.board.sync(noteElement)
                 }, TICK_TIMEOUT)
 
                 playingNotes[noteUpper] = {
@@ -219,16 +233,26 @@ export function keyBoards() {
                 if(!tickTimeout || !playingNotes[note]) {
                     return false
                 }
+                const offsetX = frame.x - (frame.width/2)
+                const offsetY = frame.y - (frame.height/2)
+
                 const noteUpper = note.toUpperCase()
                 playingNotes[noteUpper].clearInterval()
                 const startTime = playingNotes[noteUpper].startTime
                 const duration = finishTime - startTime
 
                 playingNotes[noteUpper].noteElement.width =  Math.floor(duration * SIZE_PER_MILISECOND)
-                playingNotes[noteUpper].noteElement.x =  RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (playingNotes[noteUpper].noteElement.width / 2)
+                playingNotes[noteUpper].noteElement.x = RECORD_AREA_OFFSET + Math.floor(startTime * SIZE_PER_MILISECOND) + (playingNotes[noteUpper].noteElement.width / 2)
 
                 await miro.board.sync(playingNotes[noteUpper].noteElement)
-                await frame.add(playingNotes[noteUpper].noteElement)
+
+                playingNotes[noteUpper].noteElement.y -= offsetY
+                playingNotes[noteUpper].noteElement.x -= offsetX
+                try {                    
+                    await frame.add(playingNotes[noteUpper].noteElement)
+                }   catch(e) {
+
+                }
 
                 delete playingNotes[noteUpper]
 

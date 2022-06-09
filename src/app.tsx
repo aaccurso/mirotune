@@ -111,9 +111,10 @@ function App() {
 
   const handlePlay = async (tuneFrame: Frame) => {
     handleStop()
-    const keyboard: BoardKeyboard = await keyboards.prepareKeyboard(tuneFrame)
+    const syncFrame = await miro.board.getById(tuneFrame.id)
+    const keyboard: BoardKeyboard = await keyboards.prepareKeyboard(syncFrame)
     setCurrentTuneFramePlaying({
-      frame: tuneFrame,
+      frame: syncFrame,
       keyboard,
     })
     const onPlayNote = (note: string, duration: number) => {
