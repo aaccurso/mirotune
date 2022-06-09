@@ -3,3 +3,7 @@
     height: 36px;
     padding: var(--space-xsmall) 12px var(--space-xsmall);
 }
+
+.instrument-select {
+    text-transform: capitalize;
+}

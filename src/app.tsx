@@ -12,6 +12,7 @@ const audioContext = new window.AudioContext();
 const soundfontHostname = 'https://d1pzp51pvbm36p.cloudfront.net';
 
 const RECORDING_INTERVAL_MS = 50
+const tunePrefix = 'MiroTune - '
 
 interface BoardKeyboard {
   startRecording(): Promise<void>;
@@ -56,7 +57,7 @@ function App() {
     console.log('tune frames useEffect')
     async function getTuneFrames() {
       const frames = await miro.board.get({type: 'frame'})
-      setTuneFrames(frames.filter(frame => frame.title.includes('MiroTune')))
+      setTuneFrames(frames.filter(frame => frame.title.includes(tunePrefix)))
     }
     getTuneFrames()
   }, [])
@@ -68,7 +69,7 @@ function App() {
     //   x: viewport.x + viewport.width,
     //   y: viewport.y + viewport.height
     // }
-    const recordKeyboard = await keyboards.createKeyboard(`MiroTune - ${Date.now()}`)
+    const recordKeyboard = await keyboards.createKeyboard(`${tunePrefix}${Date.now()}`)
     const newTuneFrame = recordKeyboard.getFrame()
     setTuneFrames([...tuneFrames, newTuneFrame])
     setRecordKeyboard(recordKeyboard)
@@ -134,12 +135,12 @@ function App() {
       <div className="cs1 ce12">
         <div className="input-group">
           <select
-            className="select select-small"
+            className="select select-small instrument-select"
             onChange={(event) => setInstrumentName(event.target.value)}
             value={instrumentName}
           >
             {instruments.map(instrument => (
-              <option key={instrument} value={instrument}>{instrument}</option>
+              <option key={instrument} value={instrument}>{instrument.replaceAll('_', ' ')}</option>
             ))}
           </select>
         </div>
@@ -174,14 +175,16 @@ function App() {
           <h3 className="h3">Tunes in this board</h3>
           {tuneFrames.length === 0 && (
             <div className="cs1 ce12">
-              Click the Record button to start a new Tune.
+              <p className="p-medium">
+                Click the Record button to start a new Tune.
+              </p>
             </div>
           )}
           {tuneFrames.map((tuneFrame) => {
             return (
               <div className="grid" style={{"marginBottom": '10px'}} key={tuneFrame.id}>
                 <div className="cs1 ce9">
-                  {tuneFrame.title}
+                  {tuneFrame.title.replace(tunePrefix, '')}
                 </div>
                 <div className="cs10 ce12">
                     {currentTuneFramePlaying?.frame.id !== tuneFrame.id && (
