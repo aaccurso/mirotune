@@ -6,6 +6,7 @@ export function keyBoards() {
     const SIZE_PER_MILISECOND = 0.1
     const TICK_TIMEOUT = 500
     const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60
+    const PLAY_INTERVAL_MS = 50
     
     async function createFrame(title: string) {
         const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
@@ -106,12 +107,13 @@ export function keyBoards() {
                 [value.y]: key
             }
         }, {})
+        console.log('notesPosition', notesPosition)
         const recorded = {}
 
         for(const child of children ) {
             if(child.shape === "round_rectangle") {
                 const startX = (child.x - RECORD_AREA_OFFSET - (child.width/2))
-                const startTime = Math.floor(startX / SIZE_PER_MILISECOND) - (Math.floor(startX / SIZE_PER_MILISECOND) % 50)
+                const startTime = Math.floor(startX / SIZE_PER_MILISECOND) - (Math.floor(startX / SIZE_PER_MILISECOND) % PLAY_INTERVAL_MS)
                 const duration  = Math.floor(child.width / SIZE_PER_MILISECOND)
                 recorded[startTime] = [...(recorded[startTime] || []), {duration, note: notesPosition[child.y], child}]
             }
@@ -154,7 +156,7 @@ export function keyBoards() {
                       "textAlign": "center",
                       "textAlignVertical": "bottom"
                     },
-                    "x": RECORD_AREA_OFFSET,
+                    "x": frame.x - frame.width / 2 + RECORD_AREA_OFFSET,
                     "y": frame.y,
                     "width": 8,
                     "height": frame.height * 2
@@ -179,12 +181,13 @@ export function keyBoards() {
                 }
 
                 const noteUpper = note.toUpperCase()
+                const isAccidental = noteUpper.includes('#')
                 const elementWidth =  8
                 const noteElement = await miro.board.createShape({
                     "shape": "round_rectangle",
                     "content": `<p>${noteUpper}</p>`,
                     "style": {
-                      "fillColor": "#6881FF",
+                      "fillColor": isAccidental ? "#3D51D4" : "#6881FF",
                       "fontFamily": "open_sans",
                       "fontSize": 10,
                       "textAlign": "center",
@@ -232,6 +235,7 @@ export function keyBoards() {
             },
             async play(onPlayNote, onStop) {
                 const recorded = await getRecordFromFrame(frame, notes)
+                const notesLength = Object.values(recorded).length
                 console.log("RECORDED: ", recorded)
 
                 playTick = await miro.board.createShape({
@@ -243,7 +247,7 @@ export function keyBoards() {
                       "textAlign": "center",
                       "textAlignVertical": "bottom"
                     },
-                    "x": RECORD_AREA_OFFSET,
+                    "x": frame.x - frame.width / 2 + RECORD_AREA_OFFSET,
                     "y": frame.y,
                     "width": 8,
                     "height": frame.height * 2
@@ -257,29 +261,35 @@ export function keyBoards() {
                 
                 let miliseconds = 0
                 let count = 0
-                playInterval = setInterval(() => {
-                    miliseconds += 50
+                playInterval = setInterval(async () => {
+                    miliseconds += PLAY_INTERVAL_MS
                     
                     if(recorded[miliseconds]) {
                         count++
                         for(const record of recorded[miliseconds]){
                             onPlayNote(record.note, record.duration)
-                            record.child.style.fillColor = "#77CC66"
-                            
-                            miro.board.sync(record.child)
+                            const activeNoteElement = await miro.board.createShape({
+                                "shape": "round_rectangle",
+                                "style": {
+                                  "fillColor": "#77CC66",
+                                },
+                                "x": record.child.x + frame.x - frame.width / 2,
+                                "y": record.child.y + frame.y - frame.height / 2,
+                                "width": record.child.width,
+                                "height": record.child.height
+                            })
                             setTimeout(() => {
-                                record.child.style.fillColor = "#6881FF"
-                                miro.board.sync(record.child)
+                                miro.board.remove(activeNoteElement)
                             }, record.duration)
                         }
                     }
 
-                    if(Object.values(recorded).length === count) {
+                    if(notesLength === count) {
                         console.log("stopped")
                         this.stopPlaying()
                         onStop && onStop()
                     }
-                }, 50)
+                }, PLAY_INTERVAL_MS)
             },
             stopPlaying() {
                 clearInterval(playInterval)
@@ -301,18 +311,3 @@ export function keyBoards() {
         prepareKeyboard: buildKeyboad,
     }
 }
-
-// const keyboards = keyBoards()
-// const keyboard = await keyboards.createKeyboard()
-
-// await keyboard.startRecording();
-// setTimeout(async () => {
-//     await keyboard.startNote("C", 1000)
-//     setTimeout(async () => {
-//         await keyboard.stopNote("C", 5000)
-//         await keyboard.stopRecording()
-//         keyboard.play((note, duration) => {
-//             console.log(note, duration)
-//         })
-//     }, 4000)
-// }, 1000)
