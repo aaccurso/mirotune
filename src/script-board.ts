@@ -9,11 +9,12 @@ export function keyBoards() {
     const TICK_TIMEOUT = 500
     const FRAME_WIDTH_BY_TIME = SIZE_PER_MILISECOND * 1000 * 60
     const PLAY_INTERVAL_MS = 50
+    const KEYBOARD_NOTES = 11
     
     async function createFrame(title: string) {
         const frames = await miro.board.get({type: 'frame'})
         const currentFramesNumber = frames.filter(frame => frame.title.startsWith("MiroTune - ")).length
-        const frameHeight = (NOTE_HEIGHT * 7) + (2*FRAME_BORDER)
+        const frameHeight = (NOTE_HEIGHT * KEYBOARD_NOTES) + (2*FRAME_BORDER)
         const frameWidth = NOTE_WIDTH + (2*FRAME_BORDER) + FRAME_WIDTH_BY_TIME
         return miro.board.createFrame({
             title,
@@ -68,7 +69,7 @@ export function keyBoards() {
         let newPositionY = FRAME_BORDER + offsetY + (whiteNote.width/2)
         
         const notes = {}
-        for(const note of ["C","D","E","F","G","A","B"]) {
+        for(const note of ["C3","D3","E3","F3","G3","A3","B3","C4","D4","E4","F4"]) {
             const shapeCreated = await miro.board.createShape({
                 ...whiteNote,
                 content: `<p>${note}</p>`,
@@ -88,7 +89,7 @@ export function keyBoards() {
         newPositionX = FRAME_BORDER + offsetX + (blackNote.height/2)
         newPositionY = FRAME_BORDER + offsetY + (blackNote.width/2) + blackNote.width
     
-        for(const note of ["C#","D#",null,"F#","G#","A#", null]) {
+        for(const note of ["C#3","D#3",null,"F#3","G#3","A#3", null,"C#4","D#4",null]) {
             if(note) {
                 const shapeCreated = await miro.board.createShape({
                     ...blackNote,
